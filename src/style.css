@@ -1,1 +1,5 @@
-body { margin: 0; padding: 0; background: #fff; }
+
+.selected {
+  background-color: #4CAF50;
+  color: white;
+}

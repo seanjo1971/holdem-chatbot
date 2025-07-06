@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 
 const positions = ["UTG", "MP", "CO", "Button", "SB", "BB"];
 const actions = ["None", "Raise", "Call"];
@@ -8,26 +9,41 @@ const hands = [
   "AKo", "AQo", "AJo", "KQo", "KJo", "QJo"
 ];
 
-const gtoRecommendations = {
-  Button: {
-    AKs: { None: "Raise (2.5BB)", Raise: "Call", Call: "Raise (4BB)" },
-    AQo: { None: "Raise (2.5BB)", Raise: "Fold", Call: "Raise (4BB)" }
-  }
-};
-
 export default function App() {
   const [hand, setHand] = useState("AKs");
   const [position, setPosition] = useState("Button");
   const [opponentAction, setOpponentAction] = useState("None");
   const [stackSize, setStackSize] = useState(100);
   const [potSize, setPotSize] = useState(3);
+  const [gtoData, setGtoData] = useState([]);
+  const [recommendation, setRecommendation] = useState("데이터 없음");
 
-  const baseRecommendation = gtoRecommendations[position]?.[hand]?.[opponentAction] || "데이터 없음";
-  const sprValue = stackSize && potSize ? stackSize / potSize : 0;
-  const spr = sprValue.toFixed(2);
-  const filteredRecommendation = sprValue <= 2 && baseRecommendation !== "데이터 없음"
-    ? "Push All-in (SPR<2)"
-    : baseRecommendation;
+  useEffect(() => {
+    fetch("/gto_data.json")
+      .then(res => res.json())
+      .then(data => setGtoData(data))
+      .catch(err => console.error("GTO 데이터 불러오기 실패:", err));
+  }, []);
+
+  useEffect(() => {
+    const sprValue = potSize ? stackSize / potSize : 0;
+    const roundedSpr = Math.round(sprValue * 10) / 10;
+
+    const match = gtoData.find(item =>
+      item.hand === hand &&
+      item.position === position &&
+      item.opponentAction === opponentAction &&
+      Math.round(item.spr * 10) / 10 === roundedSpr
+    );
+
+    if (sprValue <= 2 && match) {
+      setRecommendation("Push All-in (SPR<2)");
+    } else if (match) {
+      setRecommendation(match.action);
+    } else {
+      setRecommendation("데이터 없음");
+    }
+  }, [hand, position, opponentAction, stackSize, potSize, gtoData]);
 
   return (
     <div style={{ padding: 20, maxWidth: 480, margin: '0 auto', fontFamily: 'sans-serif' }}>
@@ -44,11 +60,18 @@ export default function App() {
       </select>
 
       <label>상대 액션</label><br />
-      {actions.map(act => (
-        <button key={act} onClick={() => setOpponentAction(act)} style={{ margin: '5px', padding: '8px 12px' }}>
-          {act}
-        </button>
-      ))}
+      <div>
+        {actions.map(act => (
+          <button
+            key={act}
+            onClick={() => setOpponentAction(act)}
+            className={opponentAction === act ? "selected" : ""}
+            style={{ margin: '5px', padding: '8px 12px' }}
+          >
+            {act}
+          </button>
+        ))}
+      </div>
 
       <div style={{ marginTop: 20 }}>
         <label>스택 크기 (BB)</label><br />
@@ -59,7 +82,7 @@ export default function App() {
 
       <div style={{ marginTop: 20, background: '#f0f0f0', padding: 10 }}>
         <strong>GTO 추천 액션:</strong><br />
-        {filteredRecommendation} (SPR: {spr})
+        {recommendation} (SPR: {(potSize ? (stackSize / potSize).toFixed(2) : 0)})
       </div>
     </div>
   );

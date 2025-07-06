@@ -2,15 +2,15 @@
   {
     "hand": "AA",
     "position": "SB",
-    "villainAction": "None",
+    "opponentAction": "None",
     "spr": 5,
     "action": "Raise 100%"
   },
   {
-    "hand": "AK",
+    "hand": "KK",
     "position": "Button",
-    "villainAction": "Call",
-    "spr": 3,
+    "opponentAction": "Call",
+    "spr": 3.3,
     "action": "Raise 70%, Call 30%"
   }
 ]
